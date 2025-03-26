@@ -10,7 +10,7 @@ import {
   Keyboard,
   Alert,
 } from 'react-native';
-import { createCollection, pinCollection } from '../services/api';
+import { createCollection, pinCollection, getCollections } from '../services/api';
 
 const CreateCollectionModal = ({ visible, onClose, onSuccess }) => {
   const [name, setName] = useState('');
@@ -27,13 +27,20 @@ const CreateCollectionModal = ({ visible, onClose, onSuccess }) => {
 
     setIsSubmitting(true);
     try {
+      // Create the new collection
       const response = await createCollection({
         name: name.trim(),
         description: description.trim(),
       });
       
-      // Pin the newly created collection
-      await pinCollection(response.data._id);
+      // Check if there are any existing collections
+      const collectionsResponse = await getCollections();
+      const existingCollections = collectionsResponse.data;
+      
+      // Only pin if this is the first collection
+      if (existingCollections.length === 1) { // Length is 1 because it includes the newly created collection
+        await pinCollection(response.data._id);
+      }
       
       setName('');
       setDescription('');
