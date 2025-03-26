@@ -38,8 +38,9 @@ export const updateEntry = (id, data) =>
 export const deleteEntry = (collectionId, entryId) => 
   api.delete(`/collections/${collectionId}/entries/${entryId}`);
 
-export const toggleEntryCompletion = (collectionId, entryId) =>
-  api.put(`/collections/${collectionId}/entries/${entryId}/toggle-completion`);
+export const toggleEntryCompletion = (collectionId, entryId) => {
+  return api.put(`/collections/${collectionId}/entries/${entryId}/toggle-completion`);
+};
 
 export const getRandomEntry = (collectionId) =>
   api.get(`/collections/${collectionId}/random-entry`);

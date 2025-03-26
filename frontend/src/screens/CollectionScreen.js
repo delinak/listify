@@ -20,7 +20,8 @@ import {
   pinCollection, 
   updateCollection,
   toggleEntryCompletion,
-  getRandomEntry 
+  getRandomEntry,
+  toggleEntryPin
 } from '../services/api';
 
 const CollectionScreen = ({ route, navigation }) => {
@@ -41,6 +42,9 @@ const CollectionScreen = ({ route, navigation }) => {
   const [randomEntry, setRandomEntry] = useState(null);
   const [showRandomEntry, setShowRandomEntry] = useState(false);
   const [sortOrder, setSortOrder] = useState('newest'); // 'newest' or 'oldest'
+  const [editingEntryId, setEditingEntryId] = useState(null);
+  const [editingEntryField, setEditingEntryField] = useState(null); // 'name' or 'description'
+  const [tempEntryValue, setTempEntryValue] = useState('');
 
   const handlePin = async () => {
     try {
@@ -160,9 +164,14 @@ const CollectionScreen = ({ route, navigation }) => {
   const handleToggleCompletion = async (entryId) => {
     try {
       const response = await toggleEntryCompletion(collection._id, entryId);
-      setEntries(entries.map(e => e._id === entryId ? response.data : e));
+      if (response.data) {
+        setEntries(entries.map(entry =>
+          entry._id === entryId ? { ...entry, completed: !entry.completed } : entry
+        ));
+      }
     } catch (error) {
-      Alert.alert('Error', 'Failed to update entry status');
+      console.error('Error toggling completion:', error);
+      Alert.alert('Error', 'Failed to toggle completion status');
     }
   };
 
@@ -190,6 +199,24 @@ const CollectionScreen = ({ route, navigation }) => {
     setEntries(sortEntries(entries, newOrder));
   };
 
+  const handleUpdateEntryField = async (entryId, field, value) => {
+    try {
+      const entryToUpdate = entries.find(e => e._id === entryId);
+      if (!entryToUpdate) return;
+
+      const response = await updateEntry(entryId, {
+        ...entryToUpdate,
+        [field]: value
+      });
+
+      setEntries(entries.map(e => e._id === entryId ? response.data : e));
+      setEditingEntryId(null);
+      setEditingEntryField(null);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update entry');
+    }
+  };
+
   const renderEntry = ({ item }) => (
     <TouchableOpacity
       style={[
@@ -200,18 +227,58 @@ const CollectionScreen = ({ route, navigation }) => {
       onPress={() => setExpandedEntry(expandedEntry === item._id ? null : item._id)}
     >
       <View style={styles.entryHeader}>
-        <Text style={styles.entryName}>{item.name}</Text>
-        {item.completed && (
-          <Icon name="check-circle" size={20} color="#4CAF50" style={styles.checkmark} />
-        )}
+        <View style={styles.entryTitleContainer}>
+          {item.completed && (
+            <Icon name="check-circle" size={20} color="rgba(76, 175, 80, 0.4)" style={styles.checkmark} />
+          )}
+          {editingEntryId === item._id && editingEntryField === 'name' ? (
+            <TextInput
+              style={styles.entryNameInput}
+              value={tempEntryValue}
+              onChangeText={setTempEntryValue}
+              onBlur={() => handleUpdateEntryField(item._id, 'name', tempEntryValue)}
+              autoFocus
+            />
+          ) : (
+            <TouchableOpacity 
+              onPress={(e) => {
+                e.stopPropagation();
+                setEditingEntryId(item._id);
+                setEditingEntryField('name');
+                setTempEntryValue(item.name);
+              }}
+            >
+              <Text style={styles.entryName}>{item.name}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
       
       {expandedEntry === item._id && (
         <Animated.View style={styles.expandedContent}>
-          <Text style={styles.entryDescription}>
-            {item.description || 'No description'}
-          </Text>
-          <View style={styles.entryActions}>
+          {editingEntryId === item._id && editingEntryField === 'description' ? (
+            <TextInput
+              style={styles.entryDescriptionInput}
+              value={tempEntryValue}
+              onChangeText={setTempEntryValue}
+              onBlur={() => handleUpdateEntryField(item._id, 'description', tempEntryValue)}
+              multiline
+              autoFocus
+            />
+          ) : (
+            <TouchableOpacity
+              onPress={() => {
+                setEditingEntryId(item._id);
+                setEditingEntryField('description');
+                setTempEntryValue(item.description || '');
+              }}
+            >
+              <Text style={styles.entryDescription}>
+                {item.description || 'Tap to add description'}
+              </Text>
+            </TouchableOpacity>
+          )}
+          <View style={styles.expandedActions}>
             <TouchableOpacity
               style={[styles.actionButton, item.completed && styles.completedButton]}
               onPress={() => handleToggleCompletion(item._id)}
@@ -221,10 +288,10 @@ const CollectionScreen = ({ route, navigation }) => {
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.actionButton, styles.deleteButton]}
+              style={styles.deleteIconButton}
               onPress={() => handleDeleteEntry(item._id)}
             >
-              <Text style={styles.actionButtonText}>Delete</Text>
+              <Icon name="delete" size={22} color="rgba(255, 82, 82, 0.8)" />
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -257,7 +324,7 @@ const CollectionScreen = ({ route, navigation }) => {
               </TouchableOpacity>
             )}
             <Text style={styles.creationDate}>
-              Created {new Date(collection.createdAt).toLocaleDateString('en-US', {
+              {new Date(collection.createdAt).toLocaleDateString('en-US', {
                 month: 'long',
                 day: 'numeric',
                 year: 'numeric'
@@ -474,15 +541,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  entryTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
   checkmark: {
-    marginLeft: 8,
+    marginRight: 8,
+  },
+  entryName: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  entryDescription: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    opacity: 0.8,
   },
   expandedContent: {
     marginTop: 10,
   },
-  entryActions: {
+  expandedActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginTop: 12,
   },
   actionButton: {
@@ -494,23 +577,15 @@ const styles = StyleSheet.create({
   completedButton: {
     backgroundColor: '#4CAF50',
   },
-  deleteButton: {
-    backgroundColor: '#FF5252',
-  },
   actionButtonText: {
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '500',
   },
-  entryName: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    marginBottom: 4,
-  },
-  entryDescription: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    opacity: 0.8,
+  deleteIconButton: {
+    padding: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 20,
   },
   fab: {
     width: 56,
@@ -634,7 +709,7 @@ const styles = StyleSheet.create({
   modalEntryDescription: {
     fontSize: 16,
     color: '#666',
-    marginBottom: 16,
+    marginBottom: 10,
   },
   modalCloseButton: {
     backgroundColor: '#8BA89C',
@@ -646,6 +721,19 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '500',
+  },
+  entryNameInput: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    padding: 0,
+    flex: 1,
+  },
+  entryDescriptionInput: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    opacity: 0.8,
+    padding: 0,
+    marginBottom: 10,
   },
 });
 

@@ -280,14 +280,16 @@ const styles = StyleSheet.create({
     maxHeight: 350,
   },
   pinnedSection: {
-    padding: 16,
+    padding: 10,
     paddingBottom: 5,
   },
   pinnedTitle: {
-    fontSize: 23,
+    fontSize: 18,
     fontWeight: '600',
+    marginLeft: 10,
+    marginTop: 5,
+    marginBottom: 10,
     color: '#333',
-    marginBottom: 5,
   },
   pinnedCollectionContainer: {
     position: 'relative',
@@ -307,7 +309,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '600',
     marginLeft: 20,
     marginTop: 20,
@@ -357,6 +359,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   actionButton: {
+    marginTop: 10,
     marginLeft: 15,
   },
   fab: {

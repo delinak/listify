@@ -14,11 +14,29 @@ router.put('/:id', async (req, res) => {
     if (req.body.name) entry.name = req.body.name;
     if (req.body.description) entry.description = req.body.description;
     if (req.body.completed !== undefined) entry.completed = req.body.completed;
+    if (req.body.isPinned !== undefined) entry.isPinned = req.body.isPinned;
     
     const updatedEntry = await entry.save();
     res.json(updatedEntry);
   } catch (error) {
     res.status(400).json({ message: error.message });
+  }
+});
+
+// Toggle pin status
+router.put('/:id/toggle-pin', async (req, res) => {
+  try {
+    const entry = await Entry.findById(req.params.id);
+    if (!entry) {
+      return res.status(404).json({ message: 'Entry not found' });
+    }
+    
+    entry.isPinned = !entry.isPinned;
+    const updatedEntry = await entry.save();
+    
+    res.json(updatedEntry);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 
