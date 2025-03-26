@@ -20,4 +20,5 @@ Contributions are welcome! Fork the repo, create a feature branch, and submit a 
 No license yet.
 
 ## UI images
-![Listify Home Screen](images/homepage.png)
+![Listify Home Screen](images/HomePage.png)
+![Listify Home Screen](images/CollectionPage.png)
